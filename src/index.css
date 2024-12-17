@@ -1,0 +1,26 @@
+@import 'leaflet/dist/leaflet.css';
+.search-event {
+  padding: 20px;
+  max-width: 500px;
+  margin: auto;
+}
+.search-event .search-date-from {
+  margin-bottom: 15px;
+}
+.search-event .search-date-to {
+  margin-bottom: 15px;
+}
+.search-event .categories {
+  margin-bottom: 15px;
+}
+.search-event .filter {
+  background-color: #007bff;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.search-event .filter:hover {
+  background-color: #0056b3;
+}
