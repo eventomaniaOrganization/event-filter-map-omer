@@ -6,7 +6,6 @@ import Category from './category'
 function App() {
   return (
     <div>
-      <Category/>
       <Openmap></Openmap>
     </div>
   )
