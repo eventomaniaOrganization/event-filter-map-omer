@@ -5,28 +5,9 @@ import L from 'leaflet';
 import 'leaflet-routing-machine';
 import * as turf from '@turf/turf';
 
-const customIcon = new L.Icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41],
-});
-
-const activityIcon = new L.Icon({
-    iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-  });
-
-const events = [
-    { id: 1, name: 'Musikkonsert', latitude: 59.3293, longitude: 18.0686 }, // Stockholm
-    { id: 2, name: 'Teknikkonferens', latitude: 57.7089, longitude: 11.9746 }, // Göteborg
-    { id: 3, name: 'Matfestival', latitude: 55.604981, longitude: 13.003822 }, // Malmö
-];
+import { customIcon, activityIcon } from './Openmapfolder/icons';
+import { events } from './Openmapfolder/data';
+import Routing from './Openmapfolder/Routing';
 
 
 
@@ -45,6 +26,28 @@ const Openmap = () => {
         location: null,
     })
     const [suggestions, setSuggestions] = useState([]);
+    const [waypoints, setWaypoints] = useState([]);
+    const [fromLocation, setFromLocation] = useState({name: "", coords: null});
+    const [toLocation, setToLocation] = useState({name: "", coords: null});
+    const [fromSuggestions, setFromSuggestions] = useState([]);
+    const [toSuggestions, setToSuggestions] = useState([]);
+    const [distanceResult, setDistanceResult] = useState(null);
+
+
+    const handleEventClick = (event) => {
+        const newWaypoint = [event.latitude, event.longitude];
+        setWaypoints((prev) => [...prev, newWaypoint]);
+    };
+
+    const handleActivityClick = (activity) => {
+        const newWaypoint = activity.location;
+        setWaypoints((prev) => [...prev, newWaypoint])
+    }
+    const resetWaypoints = () => {
+        setWaypoints([])
+    };
+    
+
 
     useEffect(() => {
         navigator.geolocation.getCurrentPosition(
@@ -59,30 +62,52 @@ const Openmap = () => {
     }, []);
 
 
-    //hämta förslag från nominatim
-    const featchSuggestions = async(query) => {
-        if(!query){
-            setSuggestions([])
+    const featchSuggestionsDistance = async (query, setSuggestions) => {
+        if (!query) {
+            setSuggestions([]);
             return;
         }
 
-        try {
-            const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`
-    
-            );
-            const data = await response.json();
-            setSuggestions(data);
-        } catch (error){
-            console.error("Error fetching suggestions:", error);
+        const nominatimResults = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`
+        ).then((res) => res.json());
+
+        const combinedSuggestions = [
+            ...events.map((e) => ({ name: e.name, coords: [e.latitude, e.longitude] })),
+            ...activities.map((a) => ({ name: a.title, coords: a.location })),
+            ...nominatimResults.map((n) => ({
+                name: n.display_name,
+                coords: [parseFloat(n.lat), parseFloat(n.lon)],
+            })),
+        ];
+
+        setSuggestions(combinedSuggestions);
+    };
+
+    // Hantera val av av plats (från/till)
+    const handleLocationSelect = (location, setLocation, setSuggestions) => {
+        setLocation(location);
+        setSuggestions([]);
+    };
+
+    const calculateDistance = () => {
+        if (!fromLocation.coords || !toLocation.coords) {
+            alert("Välj både Från och Till platser!");
+            return;
         }
+
+        const fromPoint = turf.point(fromLocation.coords);
+        const toPoint = turf.point(toLocation.coords);
+
+        const distance = turf.distance(fromPoint, toPoint, { units: "kilometers" });
+        setDistanceResult({ distance: distance.toFixed(2) });
     };
 
     //hantera andressen och hämta förslag
     const handleAddressChange = (e) => {
         const address = e.target.value;
         setNewActivity((prev) => ({...prev, address}));
-        featchSuggestions(address);
+        featchSuggestionsDistance(address);
     };
 
     //hantera val av adress från förslag
@@ -103,7 +128,7 @@ const Openmap = () => {
             return;
         }
 
-        if(!new Date(newActivity.startDate) >= new Date(newActivity.endDate)){
+        if(new Date(newActivity.startDate) >= new Date(newActivity.endDate)){
             alert("Satrtdatum måste vara före slutdatum");
             return;
         }
@@ -138,9 +163,67 @@ const Openmap = () => {
   return (
     <div>
         <h1>Evenemangskarta</h1>
-        <button onClick={resetPositions} style={{marginBottom: "10px"}}>
+        <button onClick={resetWaypoints} style={{marginBottom: "10px"}}>
             Återställ
         </button>
+
+        <div style={{ marginBottom: "20px" }}>
+                <h2>Sökmotor</h2>
+                <div>
+                    <label>Från:</label>
+                    <input
+                        type="text"
+                        placeholder="Skriv adress, aktivitet eller evenemang"
+                        value={fromLocation.name}
+                        onChange={(e) => {
+                            const name = e.target.value;
+                            setFromLocation((e) => ({...e, name}));
+                            featchSuggestionsDistance(name, setFromSuggestions);
+                        }}
+                    />
+                    <ul style={{ border: "1px solid #ccc", maxHeight: "200px", overflowY: "auto" }}>
+                        {fromSuggestions.map((suggestion, index) => (
+                            <li
+                                key={index}
+                                style={{ padding: "10px", cursor: "pointer" }}
+                                onClick={() => handleLocationSelect(suggestion, setFromLocation, setFromSuggestions)}
+                            >
+                                {suggestion.name}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div>
+                    <label>Till:</label>
+                    <input
+                        type="text"
+                        placeholder="Skriv adress, aktivitet eller evenemang"
+                        value={toLocation.name}
+                        onChange={(e) => {
+                            const name = e.target.value;
+                            setToLocation((e) => ({...e, name}));
+                            featchSuggestionsDistance(name, setToSuggestions);
+                        }}
+                    />
+                    <ul style={{ border: "1px solid #ccc", maxHeight: "200px", overflowY: "auto" }}>
+                        {toSuggestions.map((suggestion, index) => (
+                            <li
+                                key={index}
+                                style={{ padding: "10px", cursor: "pointer" }}
+                                onClick={() => handleLocationSelect(suggestion, setToLocation, setToSuggestions)}
+                            >
+                                {suggestion.name}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <button onClick={calculateDistance}>Beräkna avstånd</button>
+                {distanceResult && (
+                    <p>
+                        <strong>Avstånd:</strong> {distanceResult.distance} km
+                    </p>
+                )}
+            </div>
 
         <div>
             <h2>Lägg till aktiviteter</h2>
@@ -214,7 +297,7 @@ const Openmap = () => {
                     key={event.id} 
                     position={[event.latitude, event.longitude]} 
                     icon={customIcon} 
-                    eventHandlers={{ click: () => setSelectedEvent(event.latitude, event.longitude) }}
+                    eventHandlers={{ click: () => handleEventClick(event) }}
                 >
                     <Popup>
                         <strong>{event.name}</strong>
@@ -229,7 +312,7 @@ const Openmap = () => {
                     position={activity.location}
                     icon={activityIcon}
                     eventHandlers={{
-                        click: () => setSelectedEvent(activity.location),
+                        click: () => handleActivityClick(activity),
                     }}
                 >
                     <Popup>
@@ -242,8 +325,8 @@ const Openmap = () => {
             ))}
 
             {/* Visa rutt och avstånd */}
-            {userPosition && selectedEvent && (
-                <Routing userPosition={userPosition} event={selectedEvent} />
+            {userPosition && waypoints && (
+                <Routing userPosition={userPosition} event={waypoints} />
             )}
         </MapContainer>
 
@@ -260,54 +343,10 @@ const Openmap = () => {
             ))}
         </ul>
 
-        {/* visa valt evenemang och avstånd */}
-        {/* {userPosition && selectedEvent && (
-            <div style={{marginTop: '20px'}}>
-                <h2>Valt Evenemang</h2>
-                <p>
-                    <strong>Evenemang:</strong> {selectedEvent.name}
-                    <br />
-                    <strong>Avstånd:</strong>{' '}
-                    {turf.distance(
-                        turf.point([userPosition[1], userPosition[0]]),
-                        turf.point([selectedEvent.longitude, selectedEvent.latitude]),
-                        {units: "kilometers"}
-                    ).toFixed(2)}{' '} km
-                    
-                </p>
-            </div>
-
-        )} */}
+       
 
     </div>
   );
-};
-
-//routing component
-
-const Routing = ({userPosition, event}) => {
-    const map = useMap();
-
-
-    useEffect(() => {
-        const routingControl = L.Routing.control({
-            waypoints: [
-                L.latLng(userPosition[0], userPosition[1]),
-                L.latLng(event[0], event[1]), //i need multipule waypoints
-            ],
-            routeWhileDragging: true,
-            lineOptions: {
-                styles: [{ color: '#6FA1EC', weight:4}]
-            },
-            creatMarker: () => null,
-        }).addTo(map)
-
-        return() => {
-            map.removeControl(routingControl);
-        };
-    }, [map, userPosition, event]); 
-
-    return null;
 };
 
 export default Openmap
