@@ -1,6 +1,6 @@
 import React from 'react'
 import Openmap from './Openmap'
-import Category from './category'
+import Category from './Category'
 import Learn from './Learn'
 import Activity from './Activity'
 
@@ -9,7 +9,7 @@ import Activity from './Activity'
 function App() {
   return (
     <div>
-      <Openmap></Openmap>
+      <Category></Category>
     </div>
   )
 }

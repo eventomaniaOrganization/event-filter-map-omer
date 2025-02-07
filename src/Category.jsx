@@ -1,21 +1,26 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Select from 'react-select';
-import { events } from "./events";
-
-
+import eventService from './Openmapfolder/eventService';
 const Category = () => {
+    const{events, loading, error} = eventService()
+
     const [filteredEvents, setFilteredEvents] = useState(events);
-    const [startDate, setStartDate] = useState(null);
-    const [endDate, setEndDate] = useState(null);
+    const [startDateCalendar, setStartDateCalendar] = useState(null);
+    const [endDateCalendar, setEndDateCalendar] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
+
+    useEffect(() => {
+        setFilteredEvents(events)
+    }, [events]);
 
 
     const categories = useMemo(() => {
-        return Array.from(new Set(events.map((event) => event.category)));
+        if (!events) return [];
+        return Array.from(new Set(events.map((event) => event.category)))
         
-    }, []);
+    }, [events]);
 
     const categoryOptions = categories.map((cat) => ({
         value : cat,
@@ -24,15 +29,27 @@ const Category = () => {
 
     const handleFilter = () => {
         const filtered = events.filter((event) => {
-            const eventDate = new Date(event.date);
+            const eventStart = new Date(event.startDate);
+            const eventEnd = event.endDate ? new Date(event.endDate) : null;
+
+            const actualEventEnd = eventEnd || eventStart;
             return(
                 (!selectedCategory || event.category == selectedCategory.value) &&
-                (!startDate || eventDate >= startDate) &&
-                (!endDate || eventDate <= endDate)
+                (!startDateCalendar || eventStart >= startDateCalendar) &&
+                (!endDateCalendar || actualEventEnd <= endDateCalendar)
             );
         });
         setFilteredEvents(filtered);
     };
+
+    if (loading) {
+        return <div>Laddar evenemang...</div>;
+      }
+  
+      if (error) {
+        return <div>Ett fel uppstod: {error.message}</div>;
+    }
+  
 
 
   return (
@@ -44,8 +61,8 @@ const Category = () => {
             <div className='mb-3'>
                 <label>Välj ett "från" datum:</label>
                 <DatePicker 
-                    selected={startDate}
-                    onChange={(date) => setStartDate(date)}
+                    selected={startDateCalendar}
+                    onChange={(date) => setStartDateCalendar(date)}
                     placeholderText='Välj ett startdatum'
                     dateFormat="yyyy-MM-dd"
                 />
@@ -54,8 +71,8 @@ const Category = () => {
             <div className='mb-3'>
                 <label>Välj ett "till" datum:</label>
                 <DatePicker
-                    selected={endDate}
-                    onChange={(date) => setEndDate(date)}
+                    selected={endDateCalendar}
+                    onChange={(date) => setEndDateCalendar(date)}
                     placeholderText="Välj ett slutdatum"
                     dateFormat="yyyy-MM-dd"
                 />  
@@ -82,16 +99,12 @@ const Category = () => {
                 <p>Inga evenemanger hittades.</p>
             ) : (
             filteredEvents.map((result) => (
+                
                 <div className='col-md-3' key={result.id}>
                     <div className='card p-4'>
-                        <img 
-                        src={result.image}
-                        className='card-img-top'
-                        alt={result.name}
-                        />
                         <div className='card-body'>
-                            <h5 className='card-title'>{result.name}</h5>
-                            <p>Datum: {result.date}</p>
+                            <h5 className='card-title'>{result.title}</h5>
+                            <p>Datum: {result.startDate}</p>
                             <p>Kategori: {result.category}</p>
                         </div>
                     </div>

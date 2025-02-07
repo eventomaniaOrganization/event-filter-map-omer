@@ -151,14 +151,6 @@ const Openmap = () => {
         updatedActivities.splice(index, 1)
         setActivities(updatedActivities);
     };
-
-
-    const resetPositions = () => {
-        if(originalPositions){
-            setUserPosition(originalPositions.user);
-            setSelectedEvent(originalPositions.event ? {...selectedEvent, ...originalPositions.event}: null);
-        }
-    }
     
   return (
     <div>
