@@ -94,19 +94,20 @@ const Category = () => {
 
         {/* Lista med Evenemang */}
         </div>
-        <div className='row'>
+        <div className='list-group'>
             {filteredEvents.length === 0 ? (
                 <p>Inga evenemanger hittades.</p>
             ) : (
             filteredEvents.map((result) => (
                 
-                <div className='col-md-3' key={result.id}>
-                    <div className='card p-4'>
+                <div className='col-md-15' key={result.id}>
+                    <div className=' container card p-3 m-3' style={{ display: 'flex', justifyContent:'space-evenly', gap: '1rem' }}>
                         <div className='card-body'>
                             <h5 className='card-title'>{result.title}</h5>
                             <p>Datum: {result.startDate}</p>
                             <p>Kategori: {result.category}</p>
                         </div>
+                        <button className='btn btn-info'>Notis</button>
                     </div>
                 </div>
             ))
