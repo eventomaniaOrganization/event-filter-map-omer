@@ -101,7 +101,7 @@ const Category = () => {
             filteredEvents.map((result) => (
                 
                 <div className='col-md-15' key={result.id}>
-                    <div className=' container card p-3 m-3' style={{ display: 'flex', justifyContent:'space-evenly', gap: '1rem' }}>
+                    <div className=' container card p-3 m-2' style={{ display: 'flex', justifyContent:'space-evenly', gap: '1rem' }}>
                         <div className='card-body'>
                             <h5 className='card-title'>{result.title}</h5>
                             <p>Datum: {result.startDate}</p>

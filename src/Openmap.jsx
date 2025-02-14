@@ -1,21 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
+import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 import 'leaflet-routing-machine';
-import * as turf from '@turf/turf';
 
 import { customIcon, activityIcon } from './Openmapfolder/icons';
 import { events } from './Openmapfolder/data';
 import Routing from './Openmapfolder/Routing';
-
-
+import DistanceCalculator from './Openmapfolder/DistanceCalculator';
 
 const Openmap = () => {
 
     const [userPosition, setUserPosition] = useState(null);
-    const [selectedEvent, setSelectedEvent] = useState(null);
-    const [originalPositions, setOriginalPositions] = useState(null);
     const [activities, setActivities] = useState([])
     const [newActivity, setNewActivity] = useState({
         title: "",
@@ -27,11 +22,6 @@ const Openmap = () => {
     })
     const [suggestions, setSuggestions] = useState([]);
     const [waypoints, setWaypoints] = useState([]);
-    const [fromLocation, setFromLocation] = useState({name: "", coords: null});
-    const [toLocation, setToLocation] = useState({name: "", coords: null});
-    const [fromSuggestions, setFromSuggestions] = useState([]);
-    const [toSuggestions, setToSuggestions] = useState([]);
-    const [distanceResult, setDistanceResult] = useState(null);
 
 
     const handleEventClick = (event) => {
@@ -46,15 +36,12 @@ const Openmap = () => {
     const resetWaypoints = () => {
         setWaypoints([])
     };
-    
-
 
     useEffect(() => {
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const userPos = [position.coords.latitude, position.coords.longitude];
                 setUserPosition(userPos);
-                setOriginalPositions({user: userPos, event: null}); // kolla på det sen
             },
             (error) => console.error("Error fetching position", error),
             { enableHighAccuracy: true }
@@ -62,52 +49,10 @@ const Openmap = () => {
     }, []);
 
 
-    const featchSuggestionsDistance = async (query, setSuggestions) => {
-        if (!query) {
-            setSuggestions([]);
-            return;
-        }
-
-        const nominatimResults = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`
-        ).then((res) => res.json());
-
-        const combinedSuggestions = [
-            ...events.map((e) => ({ name: e.name, coords: [e.latitude, e.longitude] })),
-            ...activities.map((a) => ({ name: a.title, coords: a.location })),
-            ...nominatimResults.map((n) => ({
-                name: n.display_name,
-                coords: [parseFloat(n.lat), parseFloat(n.lon)],
-            })),
-        ];
-
-        setSuggestions(combinedSuggestions);
-    };
-
-    // Hantera val av av plats (från/till)
-    const handleLocationSelect = (location, setLocation, setSuggestions) => {
-        setLocation(location);
-        setSuggestions([]);
-    };
-
-    const calculateDistance = () => {
-        if (!fromLocation.coords || !toLocation.coords) {
-            alert("Välj både Från och Till platser!");
-            return;
-        }
-
-        const fromPoint = turf.point(fromLocation.coords);
-        const toPoint = turf.point(toLocation.coords);
-
-        const distance = turf.distance(fromPoint, toPoint, { units: "kilometers" });
-        setDistanceResult({ distance: distance.toFixed(2) });
-    };
-
     //hantera andressen och hämta förslag
     const handleAddressChange = (e) => {
         const address = e.target.value;
         setNewActivity((prev) => ({...prev, address}));
-        featchSuggestionsDistance(address);
     };
 
     //hantera val av adress från förslag
@@ -159,63 +104,7 @@ const Openmap = () => {
             Återställ
         </button>
 
-        <div style={{ marginBottom: "20px" }}>
-                <h2>Sökmotor</h2>
-                <div>
-                    <label>Från:</label>
-                    <input
-                        type="text"
-                        placeholder="Skriv adress, aktivitet eller evenemang"
-                        value={fromLocation.name}
-                        onChange={(e) => {
-                            const name = e.target.value;
-                            setFromLocation((e) => ({...e, name}));
-                            featchSuggestionsDistance(name, setFromSuggestions);
-                        }}
-                    />
-                    <ul style={{ border: "1px solid #ccc", maxHeight: "200px", overflowY: "auto" }}>
-                        {fromSuggestions.map((suggestion, index) => (
-                            <li
-                                key={index}
-                                style={{ padding: "10px", cursor: "pointer" }}
-                                onClick={() => handleLocationSelect(suggestion, setFromLocation, setFromSuggestions)}
-                            >
-                                {suggestion.name}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-                <div>
-                    <label>Till:</label>
-                    <input
-                        type="text"
-                        placeholder="Skriv adress, aktivitet eller evenemang"
-                        value={toLocation.name}
-                        onChange={(e) => {
-                            const name = e.target.value;
-                            setToLocation((e) => ({...e, name}));
-                            featchSuggestionsDistance(name, setToSuggestions);
-                        }}
-                    />
-                    <ul style={{ border: "1px solid #ccc", maxHeight: "200px", overflowY: "auto" }}>
-                        {toSuggestions.map((suggestion, index) => (
-                            <li
-                                key={index}
-                                style={{ padding: "10px", cursor: "pointer" }}
-                                onClick={() => handleLocationSelect(suggestion, setToLocation, setToSuggestions)}
-                            >
-                                {suggestion.name}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-                <button onClick={calculateDistance}>Beräkna avstånd</button>
-                {distanceResult && (
-                    <p>
-                        <strong>Avstånd:</strong> {distanceResult.distance} km
-                    </p>
-                )}
-            </div>
+        <DistanceCalculator events={events} activities={activities}/>
 
         <div>
             <h2>Lägg till aktiviteter</h2>
@@ -335,7 +224,7 @@ const Openmap = () => {
             ))}
         </ul>
 
-       
+        
 
     </div>
   );

@@ -14,7 +14,7 @@ export const fetchNominatim = async (query) => {
 
         return data.map((item) => ({
             name: item.display_name,
-            coords: [parseFloat(item.lat), parseFloat(item,lon)]
+            coords: [parseFloat(item.lat), parseFloat(item.lon)]
         }));
     }
     catch(error){

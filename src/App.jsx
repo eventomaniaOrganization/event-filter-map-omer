@@ -9,7 +9,7 @@ import Activity from './Activity'
 function App() {
   return (
     <div>
-      <Category></Category>
+      <Openmap></Openmap>
     </div>
   )
 }
