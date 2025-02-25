@@ -7,172 +7,85 @@ import { customIcon, activityIcon } from './Openmapfolder/icons';
 import { events } from './Openmapfolder/data';
 import Routing from './Openmapfolder/Routing';
 import DistanceCalculator from './Openmapfolder/DistanceCalculator';
+import AddActivities from './Openmapfolder/AddActivities';
 
 const Openmap = () => {
 
+    // userPosition: sparar användarens (din) lat/long från webbläsarens geolokalisering
     const [userPosition, setUserPosition] = useState(null);
+    
+    // activities: en array av egna aktiviteter (egna events) som man lägger till
     const [activities, setActivities] = useState([])
-    const [newActivity, setNewActivity] = useState({
-        title: "",
-        startDate: "",
-        endDate: "",
-        notes: "",
-        address: "",
-        location: null,
-    })
-    const [suggestions, setSuggestions] = useState([]);
+
+    // waypoints: en array av koordinater som ska ritas upp som en rutt
     const [waypoints, setWaypoints] = useState([]);
 
+    // useEffect körs en gång när komponenten mountas och försöker hämta din position
+    useEffect(() => {
+        navigator.geolocation.getCurrentPosition(
+            // Om det lyckas lägger vi in [lat, lng] i userPosition
+            (position) => {
+                const userPos = [position.coords.latitude, position.coords.longitude];
+                setUserPosition(userPos);
+            },
+            // Om det misslyckas får vi ett error
+            (error) => console.error("Error fetching position", error),
+            // Extra inställning för bättre noggrannhet
+            { enableHighAccuracy: true }
+        );
+    }, []);// Tom array => körs bara en gång
 
+    // När man klickar på ett event (från events-listan) lägger vi till den platsen i waypoints
     const handleEventClick = (event) => {
         const newWaypoint = [event.latitude, event.longitude];
         setWaypoints((prev) => [...prev, newWaypoint]);
     };
 
+    // När man klickar på en aktivitet lägger vi till den platsen i waypoints
     const handleActivityClick = (activity) => {
         const newWaypoint = activity.location;
         setWaypoints((prev) => [...prev, newWaypoint])
     }
+
+    // Rensar/rensar bort alla waypoints
     const resetWaypoints = () => {
         setWaypoints([])
     };
 
-    useEffect(() => {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const userPos = [position.coords.latitude, position.coords.longitude];
-                setUserPosition(userPos);
-            },
-            (error) => console.error("Error fetching position", error),
-            { enableHighAccuracy: true }
-        );
-    }, []);
 
-
-    //hantera andressen och hämta förslag
-    const handleAddressChange = (e) => {
-        const address = e.target.value;
-        setNewActivity((prev) => ({...prev, address}));
-    };
-
-    //hantera val av adress från förslag
-    const handleAddressSelect = (suggestion) => {
-        const {lat, lon} = suggestion;
-        setNewActivity((prev) => ({
-            ...prev,
-            address: suggestion.display_name,
-            location: [parseFloat(lat), parseFloat(lon)],
-        }));
-        setSuggestions([]);
-    }
-
-    // lägg till aktiviteter
-    const addActivity = () => {
-        if(!newActivity.title || !newActivity.startDate || !newActivity.endDate || !newActivity.location){
-            alert("Alla fält och plats är obligatoriska!");
-            return;
-        }
-
-        if(new Date(newActivity.startDate) >= new Date(newActivity.endDate)){
-            alert("Satrtdatum måste vara före slutdatum");
-            return;
-        }
-        
-
-        setActivities([...activities, newActivity]);
-        setNewActivity({
-            title: "",
-            startDate: "",
-            endDate: "",
-            notes: "",
-            address: "",
-            location: null,
-        });
-    };
-
-    //tabort aktiviteten
-    const removeActivity = (index) => {
-        const updatedActivities = [...activities]
-        updatedActivities.splice(index, 1)
-        setActivities(updatedActivities);
-    };
-    
   return (
     <div>
         <h1>Evenemangskarta</h1>
+         {/* Knapp för att rensa waypoints */}
         <button onClick={resetWaypoints} style={{marginBottom: "10px"}}>
             Återställ
         </button>
 
+         {/* Komponent för att söka från/till och beräkna avstånd */}
         <DistanceCalculator events={events} activities={activities}/>
 
-        <div>
-            <h2>Lägg till aktiviteter</h2>
-            <input 
-            type="text"
-            name='title'
-            placeholder='Title'
-            value={newActivity.title}
-            onChange={(e) => setNewActivity({...newActivity, title: e.target.value})}
-            />
-            <input 
-            type="datetime-local"
-            name='startDate'
-            value={newActivity.startDate}
-            onChange={(e) => setNewActivity({...newActivity, startDate: e.target.value})}            
-            />
-            <input 
-            type="datetime-local"
-            name='endDate'
-            value={newActivity.endDate}
-            onChange={(e) => setNewActivity({...newActivity, endDate: e.target.value})}
-            />
-            <textarea 
-            name="notes"
-            placeholder='Anteckningar'
-            value={newActivity.notes}
-            onChange={(e) => setNewActivity({...newActivity, notes: e.target.value})}
-            ></textarea>
-            <input 
-            type="text"
-            name='address'
-            placeholder="Skriv address"
-            value={newActivity.address}
-            onChange={handleAddressChange}
-            />
-
-            <div style={{ border: "1px solid #ccc", maxHeight: "200px", overflowY: "auto" }}>
-                {suggestions.map((suggestion, index) => (
-                    <div
-                    key={index}
-                    style={{ padding: "10px", cursor: "pointer" }}
-                    onClick={() => handleAddressSelect(suggestion)}
-                    >
-                        {suggestion.display_name}
-                    </div>
-                ))}
-            </div>
-            <button onClick={addActivity}>Lägg till</button>
-        </div>
+        {/* Här sätter vi upp vår Leaflet-karta */}  
         <MapContainer
+            // Om userPosition inte är satt än, använd [59.3293, 18.0686] som default (Stockholm)
             center={userPosition || [59.3293, 18.0686]} 
             zoom={5} 
             style={{ height: '500px', width: '100%' }}
         >
             
+             {/* TileLayer är själva "kartan" (OpenStreetMap) */}
             <TileLayer 
                 url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' 
                 attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
             />
 
-            {/* Visa användarens position */}
+            {/* Om vi har en userPosition visar vi en Marker där användaren befinner sig */}
             {userPosition && (
                 <Marker position={userPosition} icon={customIcon}>
                     <Popup>Din position</Popup>
                 </Marker>
             )}
             
-            {/* Visa närliggande evenemang */}
+            {/* Loopar igenom listan av events (importerad från data) och ritar ut en marker för varje */}
             {events.map((event) => (
                 <Marker 
                     key={event.id} 
@@ -186,7 +99,7 @@ const Openmap = () => {
                 </Marker>
             ))}
 
-            {/* Visa marker för aktiviteter */}
+            {/* Loopar igenom aktiviteter (egna events) och ritar ut en marker för varje */}
             {activities.map((activity, index) => (
                 <Marker
                     key={index}
@@ -200,30 +113,20 @@ const Openmap = () => {
                         <strong>{activity.title}</strong>
                         <p>Start: {activity.startDate}</p>
                         <p>Slut: {activity.endDate}</p>
+                        {/* Om det finns notes visar vi dem också */}
                         {activity.notes && <p>Anteckningar: {activity.notes}</p>}
                     </Popup>
                 </Marker>
             ))}
 
-            {/* Visa rutt och avstånd */}
+             {/* Routing komponent (leaflet-routing-machine) som ritar en linje mellan waypoints */}
             {userPosition && waypoints && (
                 <Routing userPosition={userPosition} event={waypoints} />
             )}
         </MapContainer>
 
-
-        <h2>Aktiviteter</h2>
-        <ul>
-            {activities.map((activity, index) => (
-                <li key={index} style={{ marginBottom: "10px" }}>
-                    <strong>{activity.title}</strong>
-                    <p>Start: {activity.startDate}</p>
-                    <p>Slut: {activity.endDate}</p>
-                    <button onClick={() => removeActivity(index)}>Ta bort</button>
-                </li>
-            ))}
-        </ul>
-
+        {/* Aktivitets-komponent */}
+        <AddActivities activities={activities} setActivities={setActivities}/>
         
 
     </div>

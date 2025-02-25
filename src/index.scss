@@ -25,3 +25,19 @@
         }
     }
 }
+
+.handle-address-select{
+    border: 1px solid #ccc;
+    max-height: 200px;
+    overflow: auto;
+}
+
+.suggestion-list-activity{
+    border: 1px solid #ccc;
+    max-height: '200px';
+    overflow: auto;
+    .handle-address-select{
+        cursor: pointer;
+        padding: 5px;
+    }
+}

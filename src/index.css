@@ -24,3 +24,19 @@
 .search-event .filter:hover {
   background-color: #0056b3;
 }
+
+.handle-address-select {
+  border: 1px solid #ccc;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.suggestion-list-activity {
+  border: 1px solid #ccc;
+  max-height: "200px";
+  overflow: auto;
+}
+.suggestion-list-activity .handle-address-select {
+  cursor: pointer;
+  padding: 5px;
+}
