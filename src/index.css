@@ -25,18 +25,24 @@
   background-color: #0056b3;
 }
 
-.handle-address-select {
-  border: 1px solid #ccc;
-  max-height: 200px;
-  overflow: auto;
+.add-activity {
+  display: flex;
+  flex-direction: column;
+  width: 50%;
+  border: 1px solid black;
+  border-radius: 10px;
+  padding: 10xp;
 }
-
-.suggestion-list-activity {
+.add-activity input {
+  margin: 10px;
+  padding: 5px;
+}
+.add-activity .suggestion-list-activity {
   border: 1px solid #ccc;
   max-height: "200px";
   overflow: auto;
 }
-.suggestion-list-activity .handle-address-select {
+.add-activity .suggestion-list-activity .handle-address-select {
   cursor: pointer;
   padding: 5px;
 }
